@@ -1,6 +1,7 @@
 # ESCPOS
 ターミナルからコマンドを送るよう
 
+公式ドキュメント: [EPSON](https://reference.epson-biz.com/modules/ref_escpos_ja/index.php?content_id=72)
 デフォルト: /dev/usb/lp1 に対して送信
 
 Command: `${CMD-1} {OPS0-1} ${OPS1-1},${CMD-2} {OPS0-2} ${OPS1-2},...`

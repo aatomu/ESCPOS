@@ -115,8 +115,7 @@ func (e *ESCcommand) PrintBitImage(imageMode BitImageMode, image []byte) *ESCcom
 	} else {
 		binary.LittleEndian.PutUint64(length, uint64(len(image)))
 	}
-	e.Cmd = append(e.Cmd, []byte{esc, '*', byte(imageMode)}...)
-	e.Cmd = append(e.Cmd, length[:2]...)
+	e.Cmd = append(e.Cmd, []byte{esc, '*', byte(imageMode), length[0], length[1]}...)
 	e.Cmd = append(e.Cmd, image...)
 	return e
 }
@@ -351,5 +350,146 @@ func (e *ESCcommand) Handstand(handstand bool) *ESCcommand {
 	} else {
 		e.Cmd = append(e.Cmd, 0x00)
 	}
+	return e
+}
+
+// https://reference.epson-biz.com/modules/ref_escpos_ja/index.php?content_id=34
+func (e *ESCcommand) SetLetterSize(h, w int) *ESCcommand {
+	e.chainCount++
+
+	if h > 8 || h < 1 {
+		e.Err = append(e.Err, fmt.Errorf("chain:%d is error, letter Height is x1-x8", e.chainCount))
+	}
+	h--
+	if w > 8 || w < 1 {
+		e.Err = append(e.Err, fmt.Errorf("chain:%d is error, letter Width is x1-x8", e.chainCount))
+	}
+	w--
+
+	zoom := make([]byte, 8)
+	binary.LittleEndian.PutUint64(zoom, uint64(w<<4+h))
+
+	e.Cmd = append(e.Cmd, []byte{gs, '!', zoom[0]}...)
+	return e
+}
+
+// https://reference.epson-biz.com/modules/ref_escpos_ja/index.php?content_id=130
+func (e *ESCcommand) PrintQRcode(dotSize, level byte, url string) *ESCcommand {
+	e.chainCount++
+
+	urlByte := []byte(url)
+	length := make([]byte, 8)
+	binary.LittleEndian.PutUint64(length, uint64(len(urlByte)+3))
+
+	// QRcode Model, https://reference.epson-biz.com/modules/ref_escpos_ja/index.php?content_id=140
+	e.Cmd = append(e.Cmd, []byte{gs, '(', 'k', 0x04, 0x00, 0x31, 0x31, 50, 0}...)
+	// QRcode ModuleSize, https://reference.epson-biz.com/modules/ref_escpos_ja/index.php?content_id=141
+	e.Cmd = append(e.Cmd, []byte{gs, '(', 'k', 0x03, 0x00, 0x31, 0x43, dotSize}...)
+	// QRcode ErrorCorrectingLevel, https://reference.epson-biz.com/modules/ref_escpos_ja/index.php?content_id=142
+	e.Cmd = append(e.Cmd, []byte{gs, '(', 'k', 0x03, 0x00, 0x31, 0x45, 48}...)
+	// QRcode URL Header, https://reference.epson-biz.com/modules/ref_escpos_ja/index.php?content_id=143
+	e.Cmd = append(e.Cmd, []byte{gs, '(', 'k', length[0], length[1], 49, 80, 48}...)
+	// QRcode URL
+	e.Cmd = append(e.Cmd, urlByte...)
+	// QRcode Print, https://reference.epson-biz.com/modules/ref_escpos_ja/index.php?content_id=144
+	e.Cmd = append(e.Cmd, []byte{gs, '(', 'k', 0x03, 0x00, 0x31, 0x51, 48}...)
+	return e
+}
+
+// https://reference.epson-biz.com/modules/ref_escpos_ja/index.php?content_id=35
+func (e *ESCcommand) Reverse(reverse bool) *ESCcommand {
+	e.chainCount++
+
+	e.Cmd = append(e.Cmd, []byte{gs, 'B'}...)
+	if reverse {
+		e.Cmd = append(e.Cmd, 0x01)
+	} else {
+		e.Cmd = append(e.Cmd, 0x00)
+	}
+	return e
+}
+
+// https://reference.epson-biz.com/modules/ref_escpos_ja/index.php?content_id=125
+type BarcodeTextPos byte
+
+const (
+	BarCodeTextNone BarcodeTextPos = 0x00
+	Top             BarcodeTextPos = 0x01
+	Bottom          BarcodeTextPos = 0x02
+	TopAndBottom    BarcodeTextPos = 0x03
+)
+
+func (e *ESCcommand) BarcodeText(pos BarcodeTextPos) *ESCcommand {
+	e.chainCount++
+
+	e.Cmd = append(e.Cmd, []byte{gs, 'H', byte(pos)}...)
+	return e
+}
+
+// https://reference.epson-biz.com/modules/ref_escpos_ja/index.php?content_id=60
+func (e *ESCcommand) SetLeftMargin(n int) *ESCcommand {
+	e.chainCount++
+
+	margin := make([]byte, 8)
+	binary.LittleEndian.PutUint64(margin, uint64(n))
+
+	e.Cmd = append(e.Cmd, []byte{gs, 'L', margin[0], margin[1]}...)
+	return e
+}
+
+// https://reference.epson-biz.com/modules/ref_escpos_ja/index.php?content_id=199
+func (e *ESCcommand) SetDefaultPitch(x, y byte) *ESCcommand {
+	e.chainCount++
+
+	e.Cmd = append(e.Cmd, []byte{gs, 'P', x, y}...)
+	return e
+}
+
+// https://reference.epson-biz.com/modules/ref_escpos_ja/index.php?content_id=36
+func (e *ESCcommand) TextSmooth(smooth bool) *ESCcommand {
+	e.chainCount++
+
+	e.Cmd = append(e.Cmd, []byte{gs, 'b'}...)
+	if smooth {
+		e.Cmd = append(e.Cmd, 0x01)
+	} else {
+		e.Cmd = append(e.Cmd, 0x00)
+	}
+	return e
+}
+
+// https://reference.epson-biz.com/modules/ref_escpos_ja/index.php?content_id=126
+func (e *ESCcommand) BarcodeTextFont(font FontType) *ESCcommand {
+	e.chainCount++
+
+	e.Cmd = append(e.Cmd, []byte{gs, 'f', byte(font)}...)
+	return e
+}
+
+// https://reference.epson-biz.com/modules/ref_escpos_ja/index.php?content_id=127
+func (e *ESCcommand) BarcodeHeight(dot byte) *ESCcommand {
+	e.chainCount++
+
+	if dot < 1 {
+		e.Err = append(e.Err, fmt.Errorf("chain:%d is error, BarcodeHeight is >= 1dot", e.chainCount))
+	}
+	e.Cmd = append(e.Cmd, []byte{gs, 'h', dot}...)
+	return e
+}
+
+// https://reference.epson-biz.com/modules/ref_escpos_ja/index.php?content_id=128
+func (e *ESCcommand) PrintBarcode(code string) *ESCcommand {
+	e.chainCount++
+	e.Cmd = append(e.Cmd, []byte{gs, 'k', 0x04}...)
+	e.Cmd = append(e.Cmd, []byte(code)...)
+	e.Cmd = append(e.Cmd, 0x00)
+	return e
+}
+
+// https://reference.epson-biz.com/modules/ref_escpos_ja/index.php?content_id=129
+func (e *ESCcommand) BarcodeWidth(n byte) *ESCcommand {
+	e.chainCount++
+
+	e.Cmd = append(e.Cmd, []byte{gs, 'w', n}...)
 	return e
 }

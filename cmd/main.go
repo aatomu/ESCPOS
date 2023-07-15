@@ -20,7 +20,8 @@ func init() {
 }
 
 func main() {
-	cmd := escpos.New().ResetSetting().Handstand(true).Text("aaaa\n").Handstand(false).Text("aaaa\n\n\n")
+	cmd := escpos.New().ResetSetting().PrintBarcode("0123456789")
 	printer.Write(cmd.Cmd)
 	fmt.Println(cmd.Err)
+
 }

@@ -1,3 +1,3 @@
-module github.com/atomu21263/ESCPOS
+module github.com/aatomu/ESCPOS
 
 go 1.20

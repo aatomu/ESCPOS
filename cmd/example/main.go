@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	escpos "github.com/atomu21263/ESCPOS"
+	escpos "github.com/aatomu/ESCPOS"
 )
 
 var (
